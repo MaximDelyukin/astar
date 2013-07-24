@@ -1,0 +1,8 @@
+* {margin:0; padding: 0;}
+.wrapper {margin:auto; border:1px solid red; width:902px;}
+.area {border:1px solid black; height:400px;}
+.unit {float:left; width:48px; height:48px; border:1px solid black; font-size:10px; font-family:Verdana;}
+.wall {background-color:grey;}
+.plain {background-color:wheat;}
+.selected {background-color: red;}
+.controls {text-align: center;}
