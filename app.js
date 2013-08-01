@@ -1,7 +1,9 @@
-(function () {
+//(function () {
 	var
 		ELEMS_LENGTH = 144,
-		ELEMS_IN_ROW = 18;
+		ELEMS_IN_ROW = 18,
+		MAP_WIDTH = ELEMS_IN_ROW,
+		MAP_HEIGHT = ELEMS_LENGTH/ELEMS_IN_ROW,
 		container = document.getElementById("area")
 	;
 
@@ -48,55 +50,124 @@
 		}
 	};
 
-	var initController = function () {
-		document.getElementById("area").addEventListener('click', handleClick, false);//TODO: add wrapper for crossbrowser event attachment
+	var point = function (x ,y) {
+		return {x: x, y: y};
+	};
 
+	var addPoints = function (a, b) {
+		return point(a.x + b.x, a.y + b.y);
+	};
+
+	var samePoint = function (a, b) {
+		return a.x === b.x && a.y === b.y;
+	};
+
+	var insideMap = function (point) {
+		return point.x >= 0 && point.x <= MAP_WIDTH && point.y >= 0 && point.y <= MAP_HEIGHT;
+	};
+
+	var paintTarget = function (elem) {
+		elem.className += " selected";
+	};
+
+	var clearSelection = function () {
+		var
+			selectedElems = document.querySelectorAll(".selected"),
+			max = selectedElems.length
+			;
+
+		for (var i = 0; i < max; i += 1) {
+			selectedElems[i].className = "unit plain";
+		}
+	};
+
+	var highlightPoints = function (points) {
+		forEach(function (i) {
+			var queryString = '{"x":' + i.x + ',' + '"y":' + i.y + '}';
+			document.querySelector("[data-coordinats='" + queryString + "']").className += ' selected';
+		}, points);
+	};
+
+	var getNeighbours = function (point) {
+		var
+			//currentPoint = JSON.parse(point.dataset.coordinats),
+			currentPoint = point,//remove later
+			points = [
+				{x: -1, y: 0},
+				{x: -1, y: -1},
+				{x: 0, y: -1},
+				{x: 1, y: -1},
+				{x: 1, y: 0},
+				{x: 1, y: 1},
+				{x: 0, y: 1},
+				{x: -1, y: 1}
+			]
+		;
+
+		return filter(insideMap, map(partial(addPoints, currentPoint), points));
+	};
+
+	var isPassable = function (point) {
+		var
+			queryString = '{"x":' + point.x + ',' + '"y":' + point.y + '}',
+			elem = document.querySelector("[data-coordinats='" + queryString + "']")
+		;
+
+		return elem.className.indexOf("wall") === -1;//TODO: use data-X instead of className
+	}
+
+	var getPassableNeighbours = function (point) {
+		return filter(isPassable, getNeighbours(point));
+	};
+
+	var route = {
+		from: null,
+		to: null,
+		isFull: function () {
+			return this.from !== null && this.to !== null;
+		}
+	};
+
+	var findRoute = function (routeObj) {
+		var
+			openList = [],
+			closedList = [],
+			from = routeObj.from,
+			to = routeObj.to
+		;
+
+		openList.push(from);
+
+		var currentPointsToCheck = map(function (el) {
+			el.parentPoint = from;
+			return el;
+		}, getPassableNeighbours(from));
+
+		closedList.push(openList[0]);//HM
+		//delete openList[0];//HM
+		console.log("passableNeighbours", getPassableNeighbours(from));
+		console.log("currentPointsToCheck", currentPointsToCheck);
+		console.log("openList", openList);
+		//openList.concat(currentPointsToCheck);
+	};
+
+	var resetRoute = function () {
+		route.from = route.to = null;
+	};
+
+	var showRoute = function (route) {
+		var
+			currentRoute = findRoute(route),
+			routeUnits = currentRoute.elems,
+			max = routeUnits.length
+			;
+
+		for (var i = 0; i < max; i += 1) {
+			routeUnits[i].className = "selected";
+		}
 	};
 
 	var handleClick = function () {
-		var route = {
-			from: null,
-			to: null,
-			isFull: function () {
-				return this.from !== null && this.to !== null;
-			}
-		};
-
-		var paintTarget = function (elem) {
-			elem.className += " selected";
-		};
-
-		var clearSelection = function () {
-			var
-				selectedElems = document.querySelectorAll(".selected"),
-				max = selectedElems.length
-			;
-
-			for (var i = 0; i < max; i += 1) {
-				selectedElems[i].className = "unit plain";
-			}
-		}
-
-		var resetRoute = function () {
-			route.from = route.to = null;
-		};
-
-		var showRoute = function (route) {
-			var
-				currentRoute = findRoute(route),
-				routeUnits = currentRoute.elems,
-				max = routeUnits.length
-			;
-
-			for (var i = 0; i < max; i += 1) {
-				routeUnits[i].className = "selected";
-			}
-		};
-
-		var findRoute = function (routeObj) {
-			alert(1);
-		};
-
 		return function (e) {
 			var target = e.target;
 			if (target.className === "unit plain" && !route.isFull()) {
@@ -121,7 +192,20 @@
 		};
 	}();
 
+	var initController = function () {
+		document.getElementById("area").addEventListener('click', handleClick, false);//TODO: add wrapper for crossbrowser event attachment
+	};
+
 	generateMap();
 	buildWalls();
 	initController();
-}());
+//}());
+
+var calculateOptimisticDistance = function (from, to) {
+	//var UNIT_SIZE = 10;
+	return Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+};
+
+var calculateDistanceBetweenNeighbours = function (parentPoint, childPoint) {
+	return parentPoint.x === childPoint.x || parentPoint.y === childPoint.y ? 10 : 14;
+}
