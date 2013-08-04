@@ -2,8 +2,8 @@
 	var
 		ELEMS_LENGTH = 144,
 		ELEMS_IN_ROW = 18,
-		MAP_WIDTH = ELEMS_IN_ROW,
-		MAP_HEIGHT = ELEMS_LENGTH/ELEMS_IN_ROW,
+		MAP_WIDTH = ELEMS_IN_ROW - 1,
+		MAP_HEIGHT = (ELEMS_LENGTH/ELEMS_IN_ROW) - 1,
 		container = document.getElementById("area")
 	;
 
@@ -115,7 +115,7 @@
 
 		return elem.className.indexOf("wall") === -1;//TODO: use data-X instead of className
 	}
-
+//TODO: rewrite getPassableNeighbours - calculate points. Then get DOM elems.
 	var getPassableNeighbours = function (point) {
 		return filter(isPassable, getNeighbours(point));
 	};
@@ -128,27 +128,116 @@
 		}
 	};
 
-	var findRoute = function (routeObj) {
+	var calculateOptimisticDistance = function (from, to) {
+		var UNIT_SIZE = 10;
+		return (Math.abs(to.x - from.x) + Math.abs(to.y - from.y)) * UNIT_SIZE;
+	};
+
+	var calculateDistanceBetweenNeighbours = function (parentPoint, childPoint) {
+		return parentPoint.x === childPoint.x || parentPoint.y === childPoint.y ? 10 : 14;
+	};
+
+	var calculateG = function (point) {//TODO: rename
 		var
-			openList = [],
-			closedList = [],
-			from = routeObj.from,
-			to = routeObj.to
+			parentPoint = point.parentPoint,
+			distanceToParent = calculateDistanceBetweenNeighbours(parentPoint, point)
 		;
 
+		if (parentPoint) {
+			return distanceToParent + parentPoint.g;
+		}
+		else {
+			return distanceToParent;
+		}
+	};
+
+	var findRoute = function (start, end) {
+		var
+			from = start,
+			to = end,
+			openList = new BinaryHeap(function (point) {
+				point.f = calculateOptimisticDistance(point, to) + point.g;
+				return point.f;
+			}),
+			closedList = []
+		;
+
+		var extractRoute = function() {
+			var resultRoute = [];
+
+			return function getParentPoint (point) {
+				resultRoute.push(point)
+				if (point.parentPoint) {
+					getParentPoint(point.parentPoint);
+				}
+				console.log('resultRoute', resultRoute);
+				return resultRoute;
+			}
+		}();
+
+		var isInOpenList = function (pointToCheck) {
+			return any(function (el) {
+				return pointToCheck.x === el.x && pointToCheck.y === el.y;//TODO: optimize. No need to iterate over items if have already result === true
+			}, openList.content);
+		};
+
+		var isInClosedList = function (pointToCheck) {
+			return any(function (el) {
+				return pointToCheck.x === el.x && pointToCheck.y === el.y;
+			}, closedList);
+		}
+
+		from.g = 0;
 		openList.push(from);
 
-		var currentPointsToCheck = map(function (el) {
-			el.parentPoint = from;
-			return el;
-		}, getPassableNeighbours(from));
+		var counter = 0;
 
-		closedList.push(openList[0]);//HM
-		//delete openList[0];//HM
-		console.log("passableNeighbours", getPassableNeighbours(from));
-		console.log("currentPointsToCheck", currentPointsToCheck);
-		console.log("openList", openList);
-		//openList.concat(currentPointsToCheck);
+		function find() {
+			console.log('openList.content before pop', openList.content);
+
+			var currentStart = openList.pop();
+			closedList.push(currentStart);
+
+			forEach(function (el) {
+				if ( !(isInClosedList(el)) ) {
+					if ( !(isInOpenList(el)) ) {
+						el.parentPoint = currentStart;
+						el.g = calculateG(el);
+						openList.push(el);
+						if (el.x === to.x && el.y === to.y) {
+							window.pointReached = true; //TODO: change this temporary stub
+						}
+					}
+					else {
+						var newG = calculateDistanceBetweenNeighbours(currentStart, el) + currentStart.g;
+						if (newG < el.g) {
+							console.log('changed parent for: ', el);
+
+							openList.remove(el);
+
+							el.parentPoint = compare;
+							el.g = calculateG(el);
+
+							openList.push(el);
+						}
+					}
+				}
+				return el;
+			}, getPassableNeighbours(currentStart));
+
+			if (!window.pointReached) {
+				find();
+			}
+			else {
+				console.log("Reached the end");
+			}
+		};
+
+		find();
+		console.log('openList.content after pop', openList.content);
+		console.log('closedList', closedList);
+
+		highlightPoints(extractRoute(openList.pop()));
 	};
 
 	var resetRoute = function () {
@@ -160,7 +249,7 @@
 			currentRoute = findRoute(route),
 			routeUnits = currentRoute.elems,
 			max = routeUnits.length
-			;
+		;
 
 		for (var i = 0; i < max; i += 1) {
 			routeUnits[i].className = "selected";
@@ -201,11 +290,14 @@
 	initController();
 //}());
 
-var calculateOptimisticDistance = function (from, to) {
-	//var UNIT_SIZE = 10;
-	return Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+var _from = {
+	x: 13,
+	y: 4
 };
 
-var calculateDistanceBetweenNeighbours = function (parentPoint, childPoint) {
-	return parentPoint.x === childPoint.x || parentPoint.y === childPoint.y ? 10 : 14;
-}
+var _to = {
+	x: 8,
+	y: 7
+};
+
+var someRoute = findRoute(_from, _to);

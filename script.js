@@ -307,7 +307,7 @@ BinaryHeap.prototype = {
 			var
 				parentIndex = Math.floor((n + 1) / 2) - 1,
 				parent = this.content[parentIndex]
-				;
+			;
 
 			if (this.scoreFunction(element) < this.scoreFunction(parent)) {
 				this.content[parentIndex] = element;
