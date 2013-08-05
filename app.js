@@ -1,4 +1,4 @@
-//(function () {
+(function () {
 	var
 		ELEMS_LENGTH = 144,
 		ELEMS_IN_ROW = 18,
@@ -38,7 +38,6 @@
 		container.appendChild(units);
 	};
 
-	//TODO: implement via map generator
 	var buildWalls = function () {
 		var
 			walls = [20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 56, 57, 58, 59, 60, 61, 66, 79, 82, 83, 84, 91, 97, 100, 102, 103, 104, 117, 118, 122],
@@ -74,7 +73,7 @@
 		var
 			selectedElems = document.querySelectorAll(".selected"),
 			max = selectedElems.length
-			;
+		;
 
 		for (var i = 0; i < max; i += 1) {
 			selectedElems[i].className = "unit plain";
@@ -89,43 +88,33 @@
 	};
 
 	var getNeighbours = function (point) {
-		var
-			//currentPoint = JSON.parse(point.dataset.coordinats),
-			currentPoint = point,//remove later
-			points = [
-				{x: -1, y: 0},
-				{x: -1, y: -1},
-				{x: 0, y: -1},
-				{x: 1, y: -1},
-				{x: 1, y: 0},
-				{x: 1, y: 1},
-				{x: 0, y: 1},
-				{x: -1, y: 1}
-			]
-		;
+		var points = [
+			{x: -1, y: 0},
+			{x: -1, y: -1},
+			{x: 0, y: -1},
+			{x: 1, y: -1},
+			{x: 1, y: 0},
+			{x: 1, y: 1},
+			{x: 0, y: 1},
+			{x: -1, y: 1}
+		];
 
-		return filter(insideMap, map(partial(addPoints, currentPoint), points));
+		return filter(insideMap, map(partial(addPoints, point), points));
 	};
 
+	//TODO: use id generation for querying in order to increase performance
+	//TODO: use data-X instead of className for storing state
 	var isPassable = function (point) {
 		var
 			queryString = '{"x":' + point.x + ',' + '"y":' + point.y + '}',
 			elem = document.querySelector("[data-coordinats='" + queryString + "']")
 		;
 
-		return elem.className.indexOf("wall") === -1;//TODO: use data-X instead of className
+		return elem.className.indexOf("wall") === -1;
 	}
-//TODO: rewrite getPassableNeighbours - calculate points. Then get DOM elems.
+
 	var getPassableNeighbours = function (point) {
 		return filter(isPassable, getNeighbours(point));
-	};
-
-	var route = {
-		from: null,
-		to: null,
-		isFull: function () {
-			return this.from !== null && this.to !== null;
-		}
 	};
 
 	var calculateOptimisticDistance = function (from, to) {
@@ -137,7 +126,7 @@
 		return parentPoint.x === childPoint.x || parentPoint.y === childPoint.y ? 10 : 14;
 	};
 
-	var calculateG = function (point) {//TODO: rename
+	var calculateG = function (point) {
 		var
 			parentPoint = point.parentPoint,
 			distanceToParent = calculateDistanceBetweenNeighbours(parentPoint, point)
@@ -162,38 +151,36 @@
 			closedList = []
 		;
 
-		var extractRoute = function() {
+		var isInOpenList = function (point) {
+			return any(function (el) {
+				return point.x === el.x && point.y === el.y;
+			}, openList.content);
+		};
+
+		var isInClosedList = function (point) {
+			return any(function (el) {
+				return point.x === el.x && point.y === el.y;
+			}, closedList);
+		};
+
+		var buildRoute = function() {
 			var resultRoute = [];
 
-			return function getParentPoint (point) {
-				resultRoute.push(point)
+			return function getParentPoint(point) {
+				resultRoute.push(point);
 				if (point.parentPoint) {
 					getParentPoint(point.parentPoint);
 				}
-				console.log('resultRoute', resultRoute);
+				
 				return resultRoute;
 			}
 		}();
 
-		var isInOpenList = function (pointToCheck) {
-			return any(function (el) {
-				return pointToCheck.x === el.x && pointToCheck.y === el.y;//TODO: optimize. No need to iterate over items if have already result === true
-			}, openList.content);
-		};
-
-		var isInClosedList = function (pointToCheck) {
-			return any(function (el) {
-				return pointToCheck.x === el.x && pointToCheck.y === el.y;
-			}, closedList);
-		}
-
 		from.g = 0;
 		openList.push(from);
 
-		var counter = 0;
-
-		function find() {
-			console.log('openList.content before pop', openList.content);
+		var find = function find() {
+			
 
 			var currentStart = openList.pop();
 			closedList.push(currentStart);
@@ -211,7 +198,7 @@
 					else {
 						var newG = calculateDistanceBetweenNeighbours(currentStart, el) + currentStart.g;
 						if (newG < el.g) {
-							console.log('changed parent for: ', el);
+							
 
 							openList.remove(el);
 
@@ -229,75 +216,60 @@
 				find();
 			}
 			else {
-				console.log("Reached the end");
+				
 			}
 		};
 
 		find();
-		console.log('openList.content after pop', openList.content);
-		console.log('closedList', closedList);
+		
+		
 
-		highlightPoints(extractRoute(openList.pop()));
+		highlightPoints(buildRoute(openList.pop()));
 	};
 
-	var resetRoute = function () {
-		route.from = route.to = null;
-	};
-
-	var showRoute = function (route) {
-		var
-			currentRoute = findRoute(route),
-			routeUnits = currentRoute.elems,
-			max = routeUnits.length
-		;
-
-		for (var i = 0; i < max; i += 1) {
-			routeUnits[i].className = "selected";
+	var route = {
+		from: null,
+		to: null,
+		isFull: function () {
+			return this.from !== null && this.to !== null;
 		}
 	};
 
-	var handleClick = function () {
-		return function (e) {
-			var target = e.target;
-			if (target.className === "unit plain" && !route.isFull()) {
-				if (route.from === null) {
-					route.from = target.dataset["coordinats"];
-					paintTarget(target);
-					console.log(route);
-					return;
-				}
-				if (route.to === null) {
-					route.to = target.dataset["coordinats"];
-					paintTarget(target);
-					console.log(route);
-					document.getElementById("get-route").onclick = showRoute;
-					return;
-				}
+	var reset = function () {
+		delete window.pointReached;
+		route.from = route.to = null;
+	};
+
+
+	var handleClick = function (e) {
+		var target = e.target;
+		if (target.className === "unit plain" && !route.isFull()) {
+			if (route.from === null) {
+				route.from = JSON.parse(target.dataset["coordinats"]);
+				paintTarget(target);
+				
+				return;
 			}
+			if (route.to === null) {
+				route.to = JSON.parse(target.dataset["coordinats"]);
+				paintTarget(target);
+				
 
-			document.getElementById("get-route").onclick = null;
-			resetRoute();
-			clearSelection();
-		};
-	}();
+				var showRoute = function () {
+					return findRoute(route.from, route.to);
+				};
 
-	var initController = function () {
-		document.getElementById("area").addEventListener('click', handleClick, false);//TODO: add wrapper for crossbrowser event attachment
+				document.getElementById("get-route").onclick = showRoute;
+				return;
+			}
+		}
+
+		document.getElementById("get-route").onclick = null;
+		reset();
+		clearSelection();
 	};
 
 	generateMap();
 	buildWalls();
-	initController();
-//}());
-
-var _from = {
-	x: 13,
-	y: 4
-};
-
-var _to = {
-	x: 8,
-	y: 7
-};
-
-var someRoute = findRoute(_from, _to);
+	document.getElementById("area").addEventListener('click', handleClick, false);//TODO: add wrapper for crossbrowser event attachment
+}());
