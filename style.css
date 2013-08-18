@@ -6,3 +6,4 @@
 .plain {background-color:wheat;}
 .selected {background-color: red;}
 .controls {text-align: center;}
+ol {list-style-position: inside;}
