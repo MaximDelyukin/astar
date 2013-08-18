@@ -1,12 +1,3 @@
-/*	var roads = {
-		"Point KiuKiu": [
-			{"to": "Hanaiapa", distance: 19},
-			{"to": "Mt Feani", distance: 15},
-			{"to": "Taaoa", distance: 15}
-		],
-		"Taaoa": []
-	};*/
-
 function partial(fn) {
 	var
 		slice = Array.prototype.slice,

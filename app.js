@@ -111,7 +111,7 @@
 		;
 
 		return elem.className.indexOf("wall") === -1;
-	}
+	};
 
 	var getPassableNeighbours = function (point) {
 		return filter(isPassable, getNeighbours(point));
@@ -221,9 +221,6 @@
 		};
 
 		find();
-		
-		
-
 		highlightPoints(buildRoute(openList.pop()));
 	};
 
